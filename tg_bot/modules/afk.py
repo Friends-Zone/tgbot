@@ -16,13 +16,11 @@ AFK_REPLY_GROUP = 8
 @run_async
 def afk(bot: Bot, update: Update):
     args = update.effective_message.text.split(None, 1)
-    if len(args) >= 2:
-        reason = args[1]
-    else:
-        reason = ""
-
+    reason = args[1] if len(args) >= 2 else ""
     sql.set_afk(update.effective_user.id, reason)
-    update.effective_message.reply_text("{} is now AFK!".format(update.effective_user.first_name))
+    update.effective_message.reply_text(
+        f"{update.effective_user.first_name} is now AFK!"
+    )
 
 
 @run_async
@@ -32,9 +30,10 @@ def no_longer_afk(bot: Bot, update: Update):
     if not user:  # ignore channels
         return
 
-    res = sql.rm_afk(user.id)
-    if res:
-        update.effective_message.reply_text("{} is no longer AFK!".format(update.effective_user.first_name))
+    if res := sql.rm_afk(user.id):
+        update.effective_message.reply_text(
+            f"{update.effective_user.first_name} is no longer AFK!"
+        )
 
 
 @run_async
@@ -61,10 +60,14 @@ def reply_afk(bot: Bot, update: Update):
             if sql.is_afk(user_id):
                 valid, reason = sql.check_afk_status(user_id)
                 if valid:
-                    if not reason:
-                        res = "{} is AFK!".format(fst_name)
-                    else:
-                        res = "{} is AFK! says its because of:\n{}".format(fst_name, reason)
+                    res = (
+                        "{} is AFK! says its because of:\n{}".format(
+                            fst_name, reason
+                        )
+                        if reason
+                        else f"{fst_name} is AFK!"
+                    )
+
                     message.reply_text(res)
 
 

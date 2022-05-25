@@ -32,9 +32,7 @@ def mute(bot: Bot, update: Update, args: List[str]) -> str:
         message.reply_text("I'm not muting myself!")
         return ""
 
-    member = chat.get_member(int(user_id))
-
-    if member:
+    if member := chat.get_member(int(user_id)):
         if is_user_admin(chat, user_id, member=member):
             message.reply_text("Afraid I can't stop an admin from talking!")
 
@@ -70,14 +68,12 @@ def unmute(bot: Bot, update: Update, args: List[str]) -> str:
         message.reply_text("You'll need to either give me a username to unmute, or reply to someone to be unmuted.")
         return ""
 
-    member = chat.get_member(int(user_id))
-
-    if member:
+    if member := chat.get_member(int(user_id)):
         if is_user_admin(chat, user_id, member=member):
             message.reply_text("This is an admin, what do you expect me to do?")
             return ""
 
-        elif member.status != 'kicked' and member.status != 'left':
+        elif member.status not in ['kicked', 'left']:
             if member.can_send_messages and member.can_send_media_messages \
                     and member.can_send_other_messages and member.can_add_web_page_previews:
                 message.reply_text("This user already has the right to speak.")
@@ -121,12 +117,11 @@ def temp_mute(bot: Bot, update: Update, args: List[str]) -> str:
     try:
         member = chat.get_member(user_id)
     except BadRequest as excp:
-        if excp.message == "User not found":
-            message.reply_text("I can't seem to find this user")
-            return ""
-        else:
+        if excp.message != "User not found":
             raise
 
+        message.reply_text("I can't seem to find this user")
+        return ""
     if is_user_admin(chat, user_id, member):
         message.reply_text("I really wish I could mute admins...")
         return ""
@@ -142,11 +137,7 @@ def temp_mute(bot: Bot, update: Update, args: List[str]) -> str:
     split_reason = reason.split(None, 1)
 
     time_val = split_reason[0].lower()
-    if len(split_reason) > 1:
-        reason = split_reason[1]
-    else:
-        reason = ""
-
+    reason = split_reason[1] if len(split_reason) > 1 else ""
     mutetime = extract_time(message, time_val)
 
     if not mutetime:
@@ -164,7 +155,7 @@ def temp_mute(bot: Bot, update: Update, args: List[str]) -> str:
     try:
         if member.can_send_messages is None or member.can_send_messages:
             bot.restrict_chat_member(chat.id, user_id, until_date=mutetime, can_send_messages=False)
-            message.reply_text("Muted for {}!".format(time_val))
+            message.reply_text(f"Muted for {time_val}!")
             return log
         else:
             message.reply_text("This user is already muted.")
@@ -172,7 +163,7 @@ def temp_mute(bot: Bot, update: Update, args: List[str]) -> str:
     except BadRequest as excp:
         if excp.message == "Reply message not found":
             # Do not reply
-            message.reply_text("Muted for {}!".format(time_val), quote=False)
+            message.reply_text(f"Muted for {time_val}!", quote=False)
             return log
         else:
             LOGGER.warning(update)

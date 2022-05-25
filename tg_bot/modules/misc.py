@@ -148,23 +148,20 @@ def slap(bot: Bot, update: Update, args: List[str]):
 
     # get user who sent message
     if msg.from_user.username:
-        curr_user = "@" + escape_markdown(msg.from_user.username)
+        curr_user = f"@{escape_markdown(msg.from_user.username)}"
     else:
-        curr_user = "[{}](tg://user?id={})".format(msg.from_user.first_name, msg.from_user.id)
+        curr_user = f"[{msg.from_user.first_name}](tg://user?id={msg.from_user.id})"
 
-    user_id = extract_user(update.effective_message, args)
-    if user_id:
+    if user_id := extract_user(update.effective_message, args):
         slapped_user = bot.get_chat(user_id)
         user1 = curr_user
         if slapped_user.username:
-            user2 = "@" + escape_markdown(slapped_user.username)
+            user2 = f"@{escape_markdown(slapped_user.username)}"
         else:
-            user2 = "[{}](tg://user?id={})".format(slapped_user.first_name,
-                                                   slapped_user.id)
+            user2 = f"[{slapped_user.first_name}](tg://user?id={slapped_user.id})"
 
-    # if no target found, bot targets the sender
     else:
-        user1 = "[{}](tg://user?id={})".format(bot.first_name, bot.id)
+        user1 = f"[{bot.first_name}](tg://user?id={bot.id})"
         user2 = curr_user
 
     temp = random.choice(SLAP_TEMPLATES)
@@ -188,8 +185,7 @@ def get_bot_ip(bot: Bot, update: Update):
 
 @run_async
 def get_id(bot: Bot, update: Update, args: List[str]):
-    user_id = extract_user(update.effective_message, args)
-    if user_id:
+    if user_id := extract_user(update.effective_message, args):
         if update.effective_message.reply_to_message and update.effective_message.reply_to_message.forward_from:
             user1 = update.effective_message.reply_to_message.from_user
             user2 = update.effective_message.reply_to_message.forward_from
@@ -202,25 +198,30 @@ def get_id(bot: Bot, update: Update, args: List[str]):
                 parse_mode=ParseMode.MARKDOWN)
         else:
             user = bot.get_chat(user_id)
-            update.effective_message.reply_text("{}'s id is `{}`.".format(escape_markdown(user.first_name), user.id),
-                                                parse_mode=ParseMode.MARKDOWN)
+            update.effective_message.reply_text(
+                f"{escape_markdown(user.first_name)}'s id is `{user.id}`.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+
     else:
         chat = update.effective_chat  # type: Optional[Chat]
         if chat.type == "private":
-            update.effective_message.reply_text("Your id is `{}`.".format(chat.id),
-                                                parse_mode=ParseMode.MARKDOWN)
+            update.effective_message.reply_text(
+                f"Your id is `{chat.id}`.", parse_mode=ParseMode.MARKDOWN
+            )
+
 
         else:
-            update.effective_message.reply_text("This group's id is `{}`.".format(chat.id),
-                                                parse_mode=ParseMode.MARKDOWN)
+            update.effective_message.reply_text(
+                f"This group's id is `{chat.id}`.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
 
 
 @run_async
 def info(bot: Bot, update: Update, args: List[str]):
     msg = update.effective_message  # type: Optional[Message]
-    user_id = extract_user(update.effective_message, args)
-
-    if user_id:
+    if user_id := extract_user(update.effective_message, args):
         user = bot.get_chat(user_id)
 
     elif not msg.reply_to_message and not args:
@@ -249,22 +250,20 @@ def info(bot: Bot, update: Update, args: List[str]):
 
     if user.id == OWNER_ID:
         text += "\n\nThis person is my owner - I would never do anything against them!"
+    elif user.id in SUDO_USERS:
+        text += "\nThis person is one of my sudo users! " \
+                "Nearly as powerful as my owner - so watch it."
     else:
-        if user.id in SUDO_USERS:
-            text += "\nThis person is one of my sudo users! " \
-                    "Nearly as powerful as my owner - so watch it."
-        else:
-            if user.id in SUPPORT_USERS:
-                text += "\nThis person is one of my support users! " \
-                        "Not quite a sudo user, but can still gban you off the map."
+        if user.id in SUPPORT_USERS:
+            text += "\nThis person is one of my support users! " \
+                    "Not quite a sudo user, but can still gban you off the map."
 
-            if user.id in WHITELIST_USERS:
-                text += "\nThis person has been whitelisted! " \
-                        "That means I'm not allowed to ban/kick them."
+        if user.id in WHITELIST_USERS:
+            text += "\nThis person has been whitelisted! " \
+                    "That means I'm not allowed to ban/kick them."
 
     for mod in USER_INFO:
-        mod_info = mod.__user_info__(user.id).strip()
-        if mod_info:
+        if mod_info := mod.__user_info__(user.id).strip():
             text += "\n\n" + mod_info
 
     update.effective_message.reply_text(text, parse_mode=ParseMode.HTML)
@@ -299,17 +298,21 @@ def get_time(bot: Bot, update: Update, args: List[str]):
                     city = part.get('long_name')
 
             if city and country:
-                location = "{}, {}".format(city, country)
+                location = f"{city}, {country}"
             elif country:
                 location = country
 
             timenow = int(datetime.utcnow().timestamp())
-            res = requests.get(GMAPS_TIME, params=dict(location="{},{}".format(lat, long), timestamp=timenow))
+            res = requests.get(
+                GMAPS_TIME,
+                params=dict(location=f"{lat},{long}", timestamp=timenow),
+            )
+
             if res.status_code == 200:
                 offset = json.loads(res.text)['dstOffset']
                 timestamp = json.loads(res.text)['rawOffset']
                 time_there = datetime.fromtimestamp(timenow + timestamp + offset).strftime("%H:%M:%S on %A %d %B")
-                update.message.reply_text("It's {} in {}".format(time_there, location))
+                update.message.reply_text(f"It's {time_there} in {location}")
 
 
 @run_async
